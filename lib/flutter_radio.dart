@@ -64,9 +64,8 @@ class FlutterRadio {
     FlutterRadio._isPlaying = false;
 
     final Map<String, dynamic> params = <String, dynamic>{'url': url};
-    String result = await _channel.invokeMethod('pause', params);
+    await _channel.invokeMethod('pause', params);
     _removePlayerCallback();
-    return result;
   }
 
   static Future<void> stop() async {
@@ -75,9 +74,8 @@ class FlutterRadio {
     }
     FlutterRadio._isPlaying = false;
 
-    String result = await _channel.invokeMethod('stop');
+    await _channel.invokeMethod('stop');
     _removePlayerCallback();
-    return result;
   }
 
   static Future<bool> isPlaying() async {

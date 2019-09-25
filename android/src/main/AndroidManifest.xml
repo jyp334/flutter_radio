@@ -6,6 +6,12 @@
 
     <application>
         <service android:name="org.gafs.flutter_plugin_playlist.service.MediaService"></service>
+        <receiver android:name="org.gafs.flutter_plugin_playlist.service.InsomniacReceiver" >
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+                <action android:name="android.media.AUDIO_BECOMING_NOISY" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

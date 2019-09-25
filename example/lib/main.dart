@@ -60,6 +60,13 @@ class _MyAppState extends State<MyApp> {
                     playingStatus();
                   },
                 ),
+                FlatButton(
+                  child: Icon(Icons.update),
+                  onPressed: () {
+                    AudioPlayerItem item=AudioPlayerItem(title: "updatetitle",url: "http://pic13.nipic.com/20110409/7119492_114440620000_2.jpg",album: "updatealbum",id: "id",isStream: false,artist: "updateartist");
+                    FlutterRadio.setMeta(item);
+                  },
+                ),
                 Text(
                   'Check Playback Status: $isPlaying',
                   style: TextStyle(fontSize: 25.0),

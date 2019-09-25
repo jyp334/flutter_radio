@@ -28,10 +28,6 @@ FlutterMethodChannel* _channel;
 
 - (instancetype)init {
     if (self = [super init]) {
-        AVAudioSession *session = [AVAudioSession sharedInstance];
-        [session setActive:YES error:nil];
-        [session setCategory:AVAudioSessionCategoryPlayback error:nil];
-        
         //setup control center and lock screen controls
         MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
         [commandCenter.togglePlayPauseCommand setEnabled:YES];
@@ -316,6 +312,10 @@ FlutterMethodChannel* _channel;
     NSLog(@"playerStart");
     _ready = NO;
     
+    if([AVAudioSession sharedInstance].category != AVAudioSessionCategoryPlayback){
+        [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:nil];
+    }
+    
     AVURLAsset* avAsset = [AVURLAsset URLAssetWithURL:audioFileURL options:nil];
     playerItem = [AVPlayerItem playerItemWithAsset:avAsset];
     audioPlayer = [AVPlayer playerWithPlayerItem:playerItem];
@@ -424,6 +424,10 @@ FlutterMethodChannel* _channel;
         }
         _isPlaying = NO;
     }
+}
+
+-(void)dealloc{
+    [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
 }
 
 @end

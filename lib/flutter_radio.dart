@@ -31,13 +31,14 @@ class FlutterRadio {
     print("playOrPause----FlutterRadio._isPlaying=${FlutterRadio._isPlaying}");
     try {
       if (FlutterRadio._isPlaying) {
-        FlutterRadio.pause(url: url);
+        return await FlutterRadio.pause(url: url);
       } else {
         print("FlutterRadio.play");
-        FlutterRadio.play(url: url);
+        return await FlutterRadio.play(url: url);
       }
     } catch (err) {
       throw Exception(err);
+      return false;
     }
   }
 
@@ -101,6 +102,7 @@ class FlutterRadio {
           String statuts = result["status"];
           if (playChange != null) {
             playChange(statuts == "0" ? false : true);
+            FlutterRadio._isPlaying = statuts == "0" ? false : true;
           }
           break;
         case "status":
@@ -110,6 +112,7 @@ class FlutterRadio {
             print("statuts=" + statuts);
             if (playChange != null) {
               playChange(statuts == "isPlaying" ? false : true);
+              FlutterRadio._isPlaying = statuts == "0" ? false : true;
             }
           }
 

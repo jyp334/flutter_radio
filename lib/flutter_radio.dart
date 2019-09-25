@@ -21,9 +21,10 @@ class FlutterRadio {
   static Future<void> audioStart([AudioPlayerItem item]) async {
     await _setPlayerCallback();
     if (item != null) {
-      await setMeta(item);
+      await initData(item);
+    }else{
+      await _channel.invokeMethod('audioStart');
     }
-    await _channel.invokeMethod('audioStart');
   }
 
   static Future<void> playOrPause({@required String url}) async {
@@ -146,6 +147,10 @@ class FlutterRadio {
       'volume': volume,
     });
     return result;
+  }
+
+  static initData(AudioPlayerItem item) async{
+    await _channel.invokeMethod('audioStart',<String,dynamic>{"url":item.url});
   }
 }
 

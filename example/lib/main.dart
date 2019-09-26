@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> audioStart() async {
-    AudioPlayerItem item=AudioPlayerItem(title: "title",url: "http://sc1.111ttt.cn/2017/1/05/09/298092035545.mp3",album: "album",id: "id",isStream: false,artist: "artist");
+    AudioPlayerItem item=AudioPlayerItem(title: "title",url: "http://sc1.111ttt.cn/2017/1/05/09/298092035545.mp3",album: "album",id: "id",artist: "artist");
     await FlutterRadio.audioStart(item);
     print('Audio Start OK');
   }
@@ -58,6 +58,13 @@ class _MyAppState extends State<MyApp> {
                   onPressed: () {
                     FlutterRadio.playOrPause(url: streamUrl);
                     playingStatus();
+                  },
+                ),
+                FlatButton(
+                  child: Icon(Icons.update),
+                  onPressed: () {
+                    AudioPlayerItem item=AudioPlayerItem(title: "updatetitle",url: "http://pic13.nipic.com/20110409/7119492_114440620000_2.jpg",album: "updatealbum",id: "id",isStream: false,artist: "updateartist");
+                    FlutterRadio.setMeta(item);
                   },
                 ),
                 Text(

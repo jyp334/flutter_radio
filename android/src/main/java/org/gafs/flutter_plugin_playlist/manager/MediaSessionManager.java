@@ -31,9 +31,9 @@ public class MediaSessionManager {
     public void initSession() {
         try {
             mMediaSession = new MediaSessionCompat(musicPlayService, MY_MEDIA_ROOT_ID);
-            mMediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
+            mMediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
             stateBuilder = new PlaybackStateCompat.Builder()
-                    .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PLAY_PAUSE).setState(((MediaService.curPlayState == MediaService.PLAY_STATE_PAUSED) ? PlaybackState.STATE_PAUSED : PlaybackState.STATE_PLAYING),0,1.0f);
+                    .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PLAY_PAUSE).setState(((MediaService.curPlayState == MediaService.PLAY_STATE_PAUSED) ? PlaybackState.STATE_PAUSED : PlaybackState.STATE_PLAYING),0,1.0f);
             mMediaSession.setPlaybackState(stateBuilder.build());
             mMediaSession.setCallback(sessionCb);
             mMediaSession.setActive(true);

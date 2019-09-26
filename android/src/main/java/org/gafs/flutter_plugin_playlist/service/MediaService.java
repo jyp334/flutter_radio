@@ -78,10 +78,6 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
     public static final int PLAY_STATE_PLAYING = 1;
     public static final int PLAY_STATE_PAUSED = 2;
 
-    private boolean resetMusic;
-
-    private AudioManager mAudioManager;
-
     private MediaSessionManager mediaSessionManager;
 
     private PlayerNotificationManager playerNotificationManager;
@@ -101,8 +97,6 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
     public void onCreate() {
         super.onCreate();
         musicPlayService = this;
-        mAudioManager = (AudioManager)
-                getSystemService(Context.AUDIO_SERVICE);
         mediaSessionManager = new MediaSessionManager(this);
         notificationManager= (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notificationManager.cancelAll();
@@ -116,7 +110,6 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
 
     private void initMediaPlayer() {
         LogTool.s("initMediaPlayer");
-        resetMusic = false;
         curPlayState = PLAT_STATE_NORAML;
         BANDWIDTH_METER = new DefaultBandwidthMeter();
         AdaptiveTrackSelection.Factory trackSelectionFactory = new AdaptiveTrackSelection.Factory((BandwidthMeter)BANDWIDTH_METER);
@@ -158,21 +151,21 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
 
                     @Nullable
                     @Override
-                    public Bitmap getCurrentLargeIcon(Player player, PlayerNotificationManager.BitmapCallback callback) {
-                        if(mediaBean!=null&&mediaBean.getImageUrl()!=null){
+                    public Bitmap getCurrentLargeIcon(Player player,final PlayerNotificationManager.BitmapCallback callback) {
+                        if(mediaBean!=null&&mediaBean.getImageUrl()!=null&&mediaBean.getImageUrl()!=""){
                             Glide.with(MediaService.this).asBitmap().load(mediaBean.getImageUrl()).override(50, 50).into(new SimpleTarget<Bitmap>() {
                                 @Override
                                 public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
                                     icon=resource;
-                                    playerNotificationManager.invalidate();
+                                    callback.onBitmap(resource);
                                 }
                             });
                         }
                         if(icon!=null){
                             LogTool.s("---------------icon!=null-----------");
-                           return icon;
+                            return icon;
                         }else{
-                            return BitmapFactory.decodeResource(getResources(),R.drawable.img_playlist_artwork_default);
+                            return BitmapFactory.decodeResource(getResources(),R.drawable.radio_default);
                         }
                     }
                 }
@@ -188,6 +181,7 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
                 stopSelf();
             }
         });
+        playerNotificationManager.setSmallIcon(R.drawable.icon_notification);
         playerNotificationManager.setPlayer(exoPlayer);
         playerNotificationManager.setMediaSessionToken(mediaSessionManager.getMediaSessionToken());
     }
@@ -221,7 +215,6 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
             mediaBean= (MediaBean) intent.getSerializableExtra(MediaConstans.MEDIA_INFO_PARAMS_KEY);
             LogTool.s("---------------playerNotificationManager.invalidate-----------");
             if(icon!=null){
-                icon.recycle();
                 icon=null;
                 LogTool.s("---------------icon.recycle()-----------");
             }
@@ -358,7 +351,16 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
 
     @Override
     public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-        MediaController.getInstance().onStatusChange(playWhenReady);
+        switch (playbackState){
+            case 3:
+                LogTool.s("onPlayerStateChanged==playWhenReady=="+playWhenReady+"----------playbackState=="+playbackState);
+                MediaController.getInstance().onStatusChange(playWhenReady);
+                break;
+            case 1:
+                LogTool.s("onPlayerStateChanged==playWhenReady=="+playWhenReady+"----------playbackState=="+playbackState);
+                MediaController.getInstance().onStatusChange(false);
+                break;
+        }
     }
 
     @Override

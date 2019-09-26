@@ -99,6 +99,7 @@ class FlutterRadio {
           break;
         case "controlPlayChanged":
           Map<String, dynamic> result = jsonDecode(call.arguments);
+          print("controlPlayChanged-----------result=$result");
           String statuts = result["status"];
           if (playChange != null) {
             playChange(statuts == "0" ? false : true);
@@ -111,7 +112,7 @@ class FlutterRadio {
             String statuts = call.arguments["status"];
             print("statuts=" + statuts);
             if (playChange != null) {
-              playChange(statuts == "isPlaying" ? false : true);
+              playChange(statuts == "0" ? false : true);
               FlutterRadio._isPlaying = statuts == "0" ? false : true;
             }
           }
@@ -153,7 +154,7 @@ class FlutterRadio {
   }
 
   static initData(AudioPlayerItem item) async{
-    await _channel.invokeMethod('audioStart',<String,dynamic>{"url":item.url});
+    await _channel.invokeMethod('audioStart',<String,dynamic>{"detaultData":item.toMap()});
   }
 }
 
@@ -183,20 +184,20 @@ class AudioPlayerItem {
   bool local;
   String artist;
   String defaultImage;
-  bool isStream;
+  String streamUrl;
 
   AudioPlayerItem(
       {this.id,
-      this.url,
-      this.thumbUrl,
-      this.title,
-      this.duration,
-      this.progress,
-      this.album,
-      this.local,
-      this.artist,
-      this.defaultImage,
-      this.isStream});
+        this.url,
+        this.thumbUrl,
+        this.title,
+        this.duration,
+        this.progress,
+        this.album,
+        this.local,
+        this.artist,
+        this.defaultImage,
+        this.streamUrl});
 
   Map<String, dynamic> toMap() {
     return {
@@ -210,7 +211,7 @@ class AudioPlayerItem {
       'local': this.local,
       'artist': this.artist,
       'defaultImage': this.defaultImage,
-      "isStream": this.isStream
+      "streamUrl": this.streamUrl
     };
   }
 }

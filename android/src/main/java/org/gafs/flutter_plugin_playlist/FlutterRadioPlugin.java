@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
-import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 
 
@@ -45,8 +44,8 @@ public class FlutterRadioPlugin implements MethodCallHandler, PreferenceManager.
 
 
   private FlutterRadioPlugin(MethodChannel channel,Activity activity) {
-      this.channel = channel;
-      this.activity=activity;
+    this.channel = channel;
+    this.activity=activity;
   }
 
   /** Plugin registration. */
@@ -69,7 +68,16 @@ public class FlutterRadioPlugin implements MethodCallHandler, PreferenceManager.
     switch (action){
       case "audioStart":
         MediaController.initMusicService();
-        MediaConstans.Media_Url = (String) call.argument("url");
+        Map<String,String> detaultData=call.argument("detaultData");
+        if(detaultData!=null){
+          MediaBean bean=new MediaBean();
+          MediaConstans.Media_Url=detaultData.get("streamUrl");
+          bean.setAlbum(detaultData.get("album"));
+          bean.setAuthor(detaultData.get("artist"));
+          bean.setName(detaultData.get("title"));
+          bean.setImageUrl(detaultData.get("url"));
+          MediaController.updateInfo(bean);
+        }
         LogTool.s("audioStart"+MediaConstans.Media_Url);
         result.success(null);
         break;
@@ -100,7 +108,7 @@ public class FlutterRadioPlugin implements MethodCallHandler, PreferenceManager.
     String statusStr=status?"1":"0";
     Map<String,String> map=new HashMap<>();
     map.put("status",statusStr);
-    channel.invokeMethod("controlPlayChanged",map);
+    channel.invokeMethod("status",map);
   }
 
   @Override

@@ -353,7 +353,7 @@ FlutterMethodChannel* _channel;
         [listener onPlayerStopped];
     }
     
-//    [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
+    [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = songInfo;
 }
 
 - (void) setNowPlaying {

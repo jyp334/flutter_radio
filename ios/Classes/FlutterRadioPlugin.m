@@ -315,6 +315,7 @@ FlutterMethodChannel* _channel;
     AVURLAsset* avAsset = [AVURLAsset URLAssetWithURL:audioFileURL options:nil];
     playerItem = [AVPlayerItem playerItemWithAsset:avAsset];
     audioPlayer = [AVPlayer playerWithPlayerItem:playerItem];
+    audioPlayer.allowsExternalPlayback = NO;
     
     //get audio state and call listeners
     [audioPlayer addObserver:self forKeyPath:@"status" options:0 context:nil];

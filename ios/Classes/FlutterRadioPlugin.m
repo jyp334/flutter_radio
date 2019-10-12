@@ -16,6 +16,7 @@
 }
 double subscriptionDuration = 1;
 FlutterMethodChannel* _channel;
+bool connected = NO;
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
     FlutterMethodChannel* channel = [FlutterMethodChannel
@@ -69,6 +70,13 @@ FlutterMethodChannel* _channel;
         _isPlaying = NO;
         _ready = NO;
         
+        // Able to play in silent mode
+        [[AVAudioSession sharedInstance]
+         setCategory: AVAudioSessionCategoryPlayback
+         error: nil];
+        // Able to play in background
+        [[AVAudioSession sharedInstance] setActive: YES error: nil];
+        [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
 
         if (!songInfo) {
             songInfo = [NSMutableDictionary dictionaryWithObjectsAndKeys:
@@ -140,6 +148,11 @@ FlutterMethodChannel* _channel;
         [self playOrPause:result];
     } else if ([@"setVolume" isEqualToString:call.method]) {
         NSNumber* volume = (NSNumber*)call.arguments[@"volume"];
+        if (volume.doubleValue == 0.0) {
+            connected = YES;
+        }else if (volume.doubleValue == 1.0) {
+            connected = NO;
+        }
         [self setVolume:[volume doubleValue] result:result];
     } else if ([@"setMeta" isEqualToString:call.method]) {
         NSDictionary* meta = (NSDictionary*)call.arguments[@"meta"];
@@ -197,6 +210,18 @@ FlutterMethodChannel* _channel;
     
     NSString *filePath = audioFileURL.absoluteString;
     result(filePath);
+    
+    if (connected) {
+        [self setVolume:0.0 result:result];
+    }else {
+        [self setVolume:1.0 result:result];
+    }
+}
+
+- (void) setVolume:(double) volume {
+    if (audioPlayer) {
+        [audioPlayer setVolume: volume];
+    }
 }
 
 // todo: remove?
@@ -281,6 +306,7 @@ FlutterMethodChannel* _channel;
         [self playerStart];
         return YES;
     }
+    
 }
 
 - (void)controlPlayOrPause{
@@ -305,9 +331,6 @@ FlutterMethodChannel* _channel;
     NSLog(@"playerStart");
     _ready = NO;
     
-    // Able to play in background
-    [[AVAudioSession sharedInstance] setActive: YES error: nil];
-    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
     if([AVAudioSession sharedInstance].category != AVAudioSessionCategoryPlayback){
         [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:nil];
     }
@@ -329,6 +352,7 @@ FlutterMethodChannel* _channel;
     
     if (audioPlayer.currentItem != nil){
         [audioPlayer pause];
+       // audioPlayer.rate = 0.0;
     }
     
     for (id<AudioPlayerListener> listener in [_listeners allObjects]) {
@@ -356,6 +380,11 @@ FlutterMethodChannel* _channel;
 - (void) setNowPlaying {
     NSLog(@"setNowPlaying  %@",songInfo);
     [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = songInfo;
+    if (connected) {
+        [self setVolume:0.0];
+    }else {
+        [self setVolume:1.0];
+    }
 //    [self startTimer];
 }
 

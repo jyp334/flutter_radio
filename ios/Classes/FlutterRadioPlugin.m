@@ -318,6 +318,12 @@ bool connected = NO;
     NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
     
     [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+    
+    if (connected) {
+        [self setVolume:0.0];
+    }else {
+        [self setVolume:1.0];
+    }
 }
 
 -(void)controlPlayStop{
@@ -380,11 +386,6 @@ bool connected = NO;
 - (void) setNowPlaying {
     NSLog(@"setNowPlaying  %@",songInfo);
     [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = songInfo;
-    if (connected) {
-        [self setVolume:0.0];
-    }else {
-        [self setVolume:1.0];
-    }
 //    [self startTimer];
 }
 

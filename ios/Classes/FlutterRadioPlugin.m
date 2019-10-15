@@ -70,13 +70,6 @@ bool connected = NO;
         _isPlaying = NO;
         _ready = NO;
         
-        // Able to play in silent mode
-        [[AVAudioSession sharedInstance]
-         setCategory: AVAudioSessionCategoryPlayback
-         error: nil];
-        // Able to play in background
-        [[AVAudioSession sharedInstance] setActive: YES error: nil];
-        [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
 
         if (!songInfo) {
             songInfo = [NSMutableDictionary dictionaryWithObjectsAndKeys:
@@ -337,6 +330,9 @@ bool connected = NO;
     NSLog(@"playerStart");
     _ready = NO;
     
+    // Able to play in background
+    [[AVAudioSession sharedInstance] setActive: YES error: nil];
+    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
     if([AVAudioSession sharedInstance].category != AVAudioSessionCategoryPlayback){
         [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:nil];
     }

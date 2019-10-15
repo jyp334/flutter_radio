@@ -355,6 +355,9 @@ bool connected = NO;
     if (audioPlayer.currentItem != nil){
         [audioPlayer pause];
        // audioPlayer.rate = 0.0;
+        [audioPlayer removeObserver:self forKeyPath:@"status"];
+        [audioPlayer removeObserver:self forKeyPath:@"rate"];
+        audioPlayer = nil;
     }
     
     for (id<AudioPlayerListener> listener in [_listeners allObjects]) {

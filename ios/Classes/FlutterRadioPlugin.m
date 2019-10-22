@@ -79,13 +79,60 @@ bool connected = NO;
                          0, MPMediaItemPropertyPlaybackDuration,
                          [NSNumber numberWithDouble:1.0], MPNowPlayingInfoPropertyPlaybackRate, nil];
         }
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleInterruption:) name:AVAudioSessionInterruptionNotification object:[AVAudioSession sharedInstance]];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleRouteChange:) name:AVAudioSessionRouteChangeNotification object:[AVAudioSession sharedInstance]];
     }
     
     return self;
 }
 
+- (void)handleInterruption:(NSNotification *)notification
+{
+    NSDictionary *info = notification.userInfo;
+    AVAudioSessionInterruptionType type = [info[AVAudioSessionInterruptionTypeKey] unsignedIntegerValue];
+    NSString * status = @"0";
+    if (type == AVAudioSessionInterruptionTypeBegan) {
+        status = @"0";
+        //Handle InterruptionBegan
+        NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
+        [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+    }else{
+        AVAudioSessionInterruptionOptions options = [info[AVAudioSessionInterruptionOptionKey] unsignedIntegerValue];
+        if (options == AVAudioSessionInterruptionOptionShouldResume) {
+            //Handle Resume
+            status = @"1";
+            //Handle InterruptionBegan
+            NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
+            [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+            [self playerStart];
+        }
+    }
+}
+
+
+- (void)handleRouteChange:(NSNotification *)notification
+{
+    NSDictionary *info = notification.userInfo;
+    AVAudioSessionRouteChangeReason reason = [info[AVAudioSessionRouteChangeReasonKey] unsignedIntegerValue];
+    if (reason == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) {  //旧音频设备断开
+        //获取上一线路描述信息
+        AVAudioSessionRouteDescription *previousRoute = info[AVAudioSessionRouteChangePreviousRouteKey];
+        //获取上一线路的输出设备类型
+        AVAudioSessionPortDescription *previousOutput = previousRoute.outputs[0];
+        NSString *portType = previousOutput.portType;
+        if ([portType isEqualToString:AVAudioSessionPortHeadphones]) {
+            NSString * status = @"0";
+            NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
+            [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+        }
+    }
+}
+
+
+
 - (void)deinit {
     NSLog(@"deinit");
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 - (void) addListener:(id <AudioPlayerListener>) listener {

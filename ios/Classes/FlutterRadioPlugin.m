@@ -106,6 +106,11 @@ bool connected = NO;
             NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
             [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
             [self playerStart];
+            if (connected) {
+                [self setVolume:0.0];
+            }else {
+                [self setVolume:1.0];
+            }
         }
     }
 }

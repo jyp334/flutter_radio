@@ -5,6 +5,7 @@ import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
+import android.os.Bundle;
 
 import org.gafs.flutter_plugin_playlist.FlutterRadioPlugin;
 import org.gafs.flutter_plugin_playlist.api.MediaConstans;
@@ -39,7 +40,50 @@ public class MediaController {
         initListener();
     }
 
+
+
+
     private void initListener() {
+        Application application=context.getApplication();
+        application.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
+            @Override
+            public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+
+            }
+
+            @Override
+            public void onActivityStarted(Activity activity) {
+
+            }
+
+            @Override
+            public void onActivityResumed(Activity activity) {
+
+            }
+
+            @Override
+            public void onActivityPaused(Activity activity) {
+
+            }
+
+            @Override
+            public void onActivityStopped(Activity activity) {
+
+            }
+
+            @Override
+            public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+
+            }
+
+            @Override
+            public void onActivityDestroyed(Activity activity) {
+                LogTool.s("onActivityDestroyed");
+                Intent intent = new Intent();
+                intent.setClass(activity, MediaService.class);
+                activity.stopService(intent);
+            }
+        });
     }
 
     public static void initMusicService() {
@@ -52,6 +96,14 @@ public class MediaController {
 
     public static void pausePlay() {
         sendCommandToService(MediaConstans.MUSIC_ACTICON_PAUSE_PLAY, null, null);
+    }
+
+    public static void connectToChromecast() {
+        sendCommandToService(MediaConstans.MUSIC_ACTICON_CONNECT_TO_CHROMECAST, null, null);
+    }
+
+    public static void disconnectChromecast() {
+        sendCommandToService(MediaConstans.MUSIC_ACTICON_DISCONNECT_CHROMECAST, null, null);
     }
 
 

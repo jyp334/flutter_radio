@@ -4,32 +4,20 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.media.AudioAttributes;
-import android.media.AudioFocusRequest;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 
 import android.net.Uri;
-import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
-import android.provider.ContactsContract;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationCompat;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
-import com.google.android.exoplayer2.C;
+import com.google.android.exoplayer2.ControlDispatcher;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.PlaybackParameters;
@@ -44,9 +32,6 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.trackselection.TrackSelector;
 import com.google.android.exoplayer2.ui.PlayerNotificationManager;
-import com.google.android.exoplayer2.ui.PlayerNotificationManager.BitmapCallback;
-import com.google.android.exoplayer2.ui.PlayerNotificationManager.MediaDescriptionAdapter;
-import com.google.android.exoplayer2.ui.PlayerNotificationManager.NotificationListener;
 import com.google.android.exoplayer2.upstream.BandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -61,22 +46,25 @@ import org.gafs.flutter_plugin_playlist.manager.LogTool;
 import org.gafs.flutter_plugin_playlist.manager.MediaController;
 import org.gafs.flutter_plugin_playlist.manager.MediaSessionManager;
 
-import static com.google.android.exoplayer2.C.USAGE_MEDIA;
+import static android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK;
 
 public class MediaService extends Service implements  AudioManager.OnAudioFocusChangeListener ,Player.EventListener{
 
     private DefaultBandwidthMeter BANDWIDTH_METER;
 
-    public  SimpleExoPlayer exoPlayer;
+    public SimpleExoPlayer exoPlayer;
 
     public MediaBean mediaBean;
 
     public static MediaService musicPlayService;
 
     public static int curPlayState = 0; //播放状态
-    public static final int PLAT_STATE_NORAML = 0;
+    public static final int PLAy_STATE_NORAML = 0;
     public static final int PLAY_STATE_PLAYING = 1;
     public static final int PLAY_STATE_PAUSED = 2;
+    public static final int PLAY_STATE_STOP = 3;
+
+    private boolean isConnectToChromecast=false;
 
     private MediaSessionManager mediaSessionManager;
 
@@ -110,7 +98,7 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
 
     private void initMediaPlayer() {
         LogTool.s("initMediaPlayer");
-        curPlayState = PLAT_STATE_NORAML;
+        curPlayState = PLAy_STATE_NORAML;
         BANDWIDTH_METER = new DefaultBandwidthMeter();
         AdaptiveTrackSelection.Factory trackSelectionFactory = new AdaptiveTrackSelection.Factory((BandwidthMeter)BANDWIDTH_METER);
         DefaultTrackSelector trackSelector = new DefaultTrackSelector((com.google.android.exoplayer2.trackselection.TrackSelection.Factory)trackSelectionFactory);
@@ -120,10 +108,11 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
     }
 
     private void initNotificationManager() {
+        playerNotificationManager=new PlayerNotificationManager(this,"channel",33,null,null);
         playerNotificationManager = PlayerNotificationManager.createWithNotificationChannel(
                 this,
                 "channel",
-                R.string.exo_download_notification_channel_name,
+                R.string.exo_controls_play_description,
                 33,
                 new PlayerNotificationManager.MediaDescriptionAdapter() {
                     @Override
@@ -173,7 +162,7 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
         playerNotificationManager.setNotificationListener(new PlayerNotificationManager.NotificationListener() {
             @Override
             public void onNotificationStarted(int notificationId, Notification notification) {
-//                startForeground(notificationId, notification);
+                startForeground(notificationId, notification);
             }
 
             @Override
@@ -183,6 +172,7 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
         });
         playerNotificationManager.setSmallIcon(R.drawable.icon_notification);
         playerNotificationManager.setPlayer(exoPlayer);
+        playerNotificationManager.setControlDispatcher(new MyControlDispatcher());
         playerNotificationManager.setMediaSessionToken(mediaSessionManager.getMediaSessionToken());
     }
 
@@ -207,6 +197,14 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
             case MediaConstans.MUSIC_INFO_UPDATE:
                 updateMediaInfo(intent);
                 break;
+            case MediaConstans.MUSIC_ACTICON_CONNECT_TO_CHROMECAST:
+                if(exoPlayer!=null)exoPlayer.setVolume(0.0f);
+                isConnectToChromecast=true;
+                break;
+            case MediaConstans.MUSIC_ACTICON_DISCONNECT_CHROMECAST:
+                if(exoPlayer!=null)exoPlayer.setVolume(1.0f);
+                isConnectToChromecast=false;
+                break;
         }
     }
 
@@ -225,16 +223,19 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
 
 
     public void play() {
-        DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(this, "flutter_radio", (TransferListener)this.BANDWIDTH_METER);
-        MediaSource mediaSource = this.buildMediaSource(dataSourceFactory);
-        if (exoPlayer == null) {
-            throw  new NullPointerException("exoPlayer not init");
+        if(curPlayState==PLAy_STATE_NORAML||curPlayState==PLAY_STATE_STOP){
+            DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(this, "flutter_radio", (TransferListener)this.BANDWIDTH_METER);
+            MediaSource mediaSource = this.buildMediaSource(dataSourceFactory);
+            if (exoPlayer == null) {
+                throw  new NullPointerException("exoPlayer not init");
+            }
+            exoPlayer.prepare(mediaSource);
+            exoPlayer.setPlayWhenReady(true);
+            curPlayState=PLAY_STATE_PLAYING;
+            mediaSessionManager.updatePlaybackState(curPlayState);
+        }else if(curPlayState==PLAY_STATE_PAUSED){
+            resume();
         }
-        exoPlayer.stop();
-        exoPlayer.prepare(mediaSource);
-        exoPlayer.setPlayWhenReady(true);
-        curPlayState=PLAY_STATE_PLAYING;
-        mediaSessionManager.updatePlaybackState(curPlayState);
     }
 
 
@@ -259,7 +260,14 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
 
     private final void resume() {
         if (MediaConstans.Media_Url != null) {
-            this.play();
+            DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(this, "flutter_radio", (TransferListener)this.BANDWIDTH_METER);
+            MediaSource mediaSource = this.buildMediaSource(dataSourceFactory);
+            if (exoPlayer == null) {
+                throw  new NullPointerException("exoPlayer not init");
+            }
+            exoPlayer.prepare(mediaSource);
+            exoPlayer.setPlayWhenReady(true);
+            curPlayState=PLAY_STATE_PLAYING;
         }
     }
 
@@ -312,23 +320,27 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
             throw  new NullPointerException("exoPlayer not init");
         }
         switch(focusChange) {
-            case -3:
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
                 if (this.isPlaying()) {
-                    exoPlayer.setVolume(0.1F);
+                    if(!isConnectToChromecast){
+                        exoPlayer.setVolume(0.1F);
+                    }
                 }
                 break;
-            case -2:
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
                 if (this.isPlaying()) {
                     this.pause();
                 }
                 break;
-            case -1:
+            case AudioManager.AUDIOFOCUS_LOSS:
                 this.stop();
-            case 0:
+            case AudioManager.AUDIOFOCUS_NONE:
             default:
                 break;
-            case 1:
-                exoPlayer.setVolume(0.8F);
+            case AudioManager.AUDIOFOCUS_GAIN:
+                if(!isConnectToChromecast){
+                    exoPlayer.setVolume(0.8F);
+                }
                 this.resume();
         }
     }
@@ -336,28 +348,30 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
 
     @Override
     public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
-
+        LogTool.s("onTimelineChanged");
     }
 
     @Override
     public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
-
+        LogTool.s("onTracksChanged");
     }
 
     @Override
     public void onLoadingChanged(boolean isLoading) {
-
+        LogTool.s("onLoadingChanged  isLoading="+isLoading);
     }
 
     @Override
     public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
         switch (playbackState){
             case 3:
+                curPlayState=playWhenReady?PLAY_STATE_PLAYING:PLAY_STATE_PAUSED;
                 LogTool.s("onPlayerStateChanged==playWhenReady=="+playWhenReady+"----------playbackState=="+playbackState);
                 MediaController.getInstance().onStatusChange(playWhenReady);
                 break;
             case 1:
                 LogTool.s("onPlayerStateChanged==playWhenReady=="+playWhenReady+"----------playbackState=="+playbackState);
+                curPlayState=PLAY_STATE_STOP;
                 MediaController.getInstance().onStatusChange(false);
                 break;
         }
@@ -365,31 +379,67 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
 
     @Override
     public void onRepeatModeChanged(int repeatMode) {
-
+        LogTool.s("onRepeatModeChanged");
     }
 
     @Override
     public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
-
+        LogTool.s("onShuffleModeEnabledChanged");
     }
 
     @Override
     public void onPlayerError(ExoPlaybackException error) {
-
+        LogTool.s("onPlayerError");
     }
 
     @Override
     public void onPositionDiscontinuity(int reason) {
-
+        LogTool.s("onPositionDiscontinuity");
     }
 
     @Override
     public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
-
+        LogTool.s("onPlaybackParametersChanged");
     }
 
     @Override
     public void onSeekProcessed() {
-
+        LogTool.s("onSeekProcessed");
     }
+
+    class MyControlDispatcher implements ControlDispatcher{
+
+        @Override
+        public boolean dispatchSetPlayWhenReady(Player player, boolean playWhenReady) {
+            if (playWhenReady){
+                resume();
+            }else{
+                pause();
+            }
+            return true;
+        }
+
+        @Override
+        public boolean dispatchSeekTo(Player player, int windowIndex, long positionMs) {
+            return true;
+        }
+
+        @Override
+        public boolean dispatchSetRepeatMode(Player player, int repeatMode) {
+            return true;
+        }
+
+        @Override
+        public boolean dispatchSetShuffleModeEnabled(Player player, boolean shuffleModeEnabled) {
+            return true;
+        }
+
+        @Override
+        public boolean dispatchStop(Player player, boolean reset) {
+            player.stop(reset);
+            return true;
+        }
+    }
+
+
 }

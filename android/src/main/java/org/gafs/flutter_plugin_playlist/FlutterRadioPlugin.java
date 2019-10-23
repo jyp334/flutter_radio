@@ -101,6 +101,15 @@ public class FlutterRadioPlugin implements MethodCallHandler, PreferenceManager.
         }
         result.success(null);
         break;
+      case "setVolume":
+        double volume = call.argument("volume");
+        if(0.0==volume){
+          MediaController.connectToChromecast();
+        }else if(1.0==volume){
+          MediaController.disconnectChromecast();
+        }
+        result.success(null);
+        break;
     }
   }
 

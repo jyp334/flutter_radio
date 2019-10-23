@@ -96,6 +96,7 @@ bool connected = NO;
         //Handle InterruptionBegan
         NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
         [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+        [self playerPause];
     }else{
         AVAudioSessionInterruptionOptions options = [info[AVAudioSessionInterruptionOptionKey] unsignedIntegerValue];
         if (options == AVAudioSessionInterruptionOptionShouldResume) {

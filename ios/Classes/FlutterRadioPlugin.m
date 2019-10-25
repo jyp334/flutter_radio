@@ -99,7 +99,7 @@ bool connected = NO;
         [self playerPause];
     }else{
         AVAudioSessionInterruptionOptions options = [info[AVAudioSessionInterruptionOptionKey] unsignedIntegerValue];
-        if (options == AVAudioSessionInterruptionOptionShouldResume || type == AVAudioSessionInterruptionTypeEnded) {
+        if (options == AVAudioSessionInterruptionOptionShouldResume) {
             //Handle Resume
             status = @"1";
             //Handle InterruptionBegan

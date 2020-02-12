@@ -355,7 +355,7 @@ bool connected = NO;
     
 }
 
-- (void)controlPlayOrPause{
+- (MPRemoteCommandHandlerStatus)controlPlayOrPause{
     BOOL isPlaying = [self playerPlayPause];
     NSString * status = @"0";
     if(isPlaying == YES){
@@ -370,13 +370,15 @@ bool connected = NO;
     }else {
         [self setVolume:1.0];
     }
+    return MPRemoteCommandHandlerStatusSuccess;
 }
 
--(void)controlPlayStop{
+-(MPRemoteCommandHandlerStatus)controlPlayStop{
     [self playerStop];
     NSString* statusStr = @"{\"status\": \"0\"}";
     
     [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+    return MPRemoteCommandHandlerStatusSuccess;
 }
 
 - (void) playerStart {

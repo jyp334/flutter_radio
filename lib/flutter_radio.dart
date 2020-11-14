@@ -22,7 +22,7 @@ class FlutterRadio {
     await _setPlayerCallback();
     if (item != null) {
       await initData(item);
-    }else{
+    } else {
       await _channel.invokeMethod('audioStart');
     }
   }
@@ -140,6 +140,13 @@ class FlutterRadio {
     _removePlayerCallback();
   }
 
+  // 0 audio 1 radio
+  static setCurrentPlyer(int playerIndex) async {
+    await _channel.invokeMethod('setCurrentPlyer', <String, dynamic>{
+      'playerIndex': "$playerIndex",
+    });
+  }
+
   static Future<String> setVolume(double volume) async {
     String result = '';
     if (volume < 0.0 || volume > 1.0) {
@@ -153,8 +160,9 @@ class FlutterRadio {
     return result;
   }
 
-  static initData(AudioPlayerItem item) async{
-    await _channel.invokeMethod('audioStart',<String,dynamic>{"detaultData":item.toMap()});
+  static initData(AudioPlayerItem item) async {
+    await _channel.invokeMethod(
+        'audioStart', <String, dynamic>{"detaultData": item.toMap()});
   }
 }
 
@@ -188,16 +196,16 @@ class AudioPlayerItem {
 
   AudioPlayerItem(
       {this.id,
-        this.url,
-        this.thumbUrl,
-        this.title,
-        this.duration,
-        this.progress,
-        this.album,
-        this.local,
-        this.artist,
-        this.defaultImage,
-        this.streamUrl});
+      this.url,
+      this.thumbUrl,
+      this.title,
+      this.duration,
+      this.progress,
+      this.album,
+      this.local,
+      this.artist,
+      this.defaultImage,
+      this.streamUrl});
 
   Map<String, dynamic> toMap() {
     return {

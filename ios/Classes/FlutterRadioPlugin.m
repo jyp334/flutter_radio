@@ -13,6 +13,8 @@
     bool _isPlaying;
     NSMutableSet* _listeners;
     int _count;
+    // 0 audio 1 radio
+    NSString * _playerIndex;
 }
 double subscriptionDuration = 1;
 FlutterMethodChannel* _channel;
@@ -31,7 +33,7 @@ bool connected = NO;
     if (self = [super init]) {
         //setup control center and lock screen controls
         MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-        [commandCenter.togglePlayPauseCommand setEnabled:YES];
+        [commandCenter.togglePlayPauseCommand setEnabled:NO];
         [commandCenter.playCommand setEnabled:YES];
         [commandCenter.pauseCommand setEnabled:YES];
         [commandCenter.stopCommand setEnabled:YES];
@@ -39,7 +41,7 @@ bool connected = NO;
         [commandCenter.previousTrackCommand setEnabled:NO];
         [commandCenter.changePlaybackRateCommand setEnabled:NO];
         
-        [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(controlPlayOrPause)];
+//        [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(controlPlayOrPause)];
         [commandCenter.playCommand addTarget:self action:@selector(controlPlayOrPause)];
         [commandCenter.pauseCommand addTarget:self action:@selector(controlPlayOrPause)];
         [commandCenter.stopCommand addTarget:self action:@selector(controlPlayStop)];
@@ -206,7 +208,13 @@ bool connected = NO;
     } else if ([@"audioStart" isEqualToString:call.method]) {
         NSDictionary* meta = (NSDictionary*)call.arguments[@"meta"];
         [self setMeta:meta result:result];
-    } else {
+    } else if ([@"setCurrentPlyer" isEqualToString:call.method]){
+        // 0 audio 1 radio
+        NSString* playerIndex = (NSString*)call.arguments[@"playerIndex"];
+        _playerIndex = playerIndex;
+        result(@"index set");
+        
+    }else {
         result(FlutterMethodNotImplemented);
     }
 }
@@ -353,6 +361,50 @@ bool connected = NO;
         return YES;
     }
     
+}
+
+- (MPRemoteCommandHandlerStatus)controlPlay{
+    if (_isPlaying || [_playerIndex isEqualToString:@"0"]) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
+    
+    BOOL isPlaying = [self playerPlayPause];
+    NSString * status = @"0";
+    if(isPlaying == YES){
+        status = @"1";
+    }
+    NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
+    
+    [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+    
+    if (connected) {
+        [self setVolume:0.0];
+    }else {
+        [self setVolume:1.0];
+    }
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)controlPause{
+    if (!_isPlaying || [_playerIndex isEqualToString:@"0"]) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
+    
+    BOOL isPlaying = [self playerPlayPause];
+    NSString * status = @"0";
+    if(isPlaying == YES){
+        status = @"1";
+    }
+    NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
+    
+    [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+    
+    if (connected) {
+        [self setVolume:0.0];
+    }else {
+        [self setVolume:1.0];
+    }
+    return MPRemoteCommandHandlerStatusSuccess;
 }
 
 - (MPRemoteCommandHandlerStatus)controlPlayOrPause{

@@ -42,8 +42,8 @@ bool connected = NO;
         [commandCenter.changePlaybackRateCommand setEnabled:NO];
         
 //        [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(controlPlayOrPause)];
-        [commandCenter.playCommand addTarget:self action:@selector(controlPlayOrPause)];
-        [commandCenter.pauseCommand addTarget:self action:@selector(controlPlayOrPause)];
+        [commandCenter.playCommand addTarget:self action:@selector(controlPlay)];
+        [commandCenter.pauseCommand addTarget:self action:@selector(controlPause)];
         [commandCenter.stopCommand addTarget:self action:@selector(controlPlayStop)];
         
         //Unused options

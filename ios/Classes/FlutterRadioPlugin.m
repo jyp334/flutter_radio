@@ -93,6 +93,9 @@ bool connected = NO;
 
 - (void)handleInterruption:(NSNotification *)notification
 {
+    if([_playerIndex isEqualToString:@"0"]){
+        return;
+    }
     NSDictionary *info = notification.userInfo;
     AVAudioSessionInterruptionType type = [info[AVAudioSessionInterruptionTypeKey] unsignedIntegerValue];
     NSString * status = @"0";
@@ -123,6 +126,9 @@ bool connected = NO;
 
 - (void)handleRouteChange:(NSNotification *)notification
 {
+    if([_playerIndex isEqualToString:@"0"]){
+        return;
+    }
     NSDictionary *info = notification.userInfo;
     AVAudioSessionRouteChangeReason reason = [info[AVAudioSessionRouteChangeReasonKey] unsignedIntegerValue];
     if (reason == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) {  //旧音频设备断开
@@ -131,7 +137,10 @@ bool connected = NO;
         //获取上一线路的输出设备类型
         AVAudioSessionPortDescription *previousOutput = previousRoute.outputs[0];
         NSString *portType = previousOutput.portType;
-        if ([portType isEqualToString:AVAudioSessionPortHeadphones]) {
+        if ([portType isEqualToString:AVAudioSessionPortHeadphones]
+            || [portType isEqualToString:AVAudioSessionPortBluetoothLE]
+            || [portType isEqualToString:AVAudioSessionPortBluetoothHFP]
+            || [portType isEqualToString:AVAudioSessionPortBluetoothA2DP]) {
             NSString * status = @"0";
             NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
             [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];

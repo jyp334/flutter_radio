@@ -344,8 +344,6 @@ bool connected = NO;
     }
 
     
-    [self setCommandCenter];
-    
     songInfo = [NSMutableDictionary dictionaryWithObjectsAndKeys:
                          itemTitle, MPMediaItemPropertyTitle,
                          ControlArtwork, MPMediaItemPropertyArtwork,
@@ -465,6 +463,7 @@ bool connected = NO;
     [audioPlayer addObserver:self forKeyPath:@"status" options:0 context:nil];
     [audioPlayer addObserver:self forKeyPath:@"rate" options:0 context:nil];
     
+    [self setCommandCenter];
     [self setNowPlaying];
 }
 

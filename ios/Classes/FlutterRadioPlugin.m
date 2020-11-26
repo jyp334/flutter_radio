@@ -13,6 +13,9 @@
     bool _isPlaying;
     NSMutableSet* _listeners;
     int _count;
+    // 0 audio 1 radio
+    NSString * _playerIndex;
+    MPRemoteCommandCenter *commandCenter;
 }
 double subscriptionDuration = 1;
 FlutterMethodChannel* _channel;
@@ -30,42 +33,11 @@ bool connected = NO;
 - (instancetype)init {
     if (self = [super init]) {
         //setup control center and lock screen controls
-        MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-        [commandCenter.togglePlayPauseCommand setEnabled:YES];
-        [commandCenter.playCommand setEnabled:YES];
-        [commandCenter.pauseCommand setEnabled:YES];
-        [commandCenter.stopCommand setEnabled:YES];
-        [commandCenter.nextTrackCommand setEnabled:NO];
-        [commandCenter.previousTrackCommand setEnabled:NO];
-        [commandCenter.changePlaybackRateCommand setEnabled:NO];
-        
-        [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(controlPlayOrPause)];
-        [commandCenter.playCommand addTarget:self action:@selector(controlPlayOrPause)];
-        [commandCenter.pauseCommand addTarget:self action:@selector(controlPlayOrPause)];
+        commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+        [self setCommandCenter];
+        [commandCenter.playCommand addTarget:self action:@selector(controlPlay)];
+        [commandCenter.pauseCommand addTarget:self action:@selector(controlPause)];
         [commandCenter.stopCommand addTarget:self action:@selector(controlPlayStop)];
-        
-        //Unused options
-        [commandCenter.skipForwardCommand setEnabled:NO];
-        [commandCenter.skipBackwardCommand setEnabled:NO];
-        if (@available(iOS 9.0, *)) {
-            [commandCenter.enableLanguageOptionCommand setEnabled:NO];
-            [commandCenter.disableLanguageOptionCommand setEnabled:NO];
-        }
-        [commandCenter.changeRepeatModeCommand setEnabled:NO];
-        [commandCenter.seekForwardCommand setEnabled:NO];
-        [commandCenter.seekBackwardCommand setEnabled:NO];
-        [commandCenter.changeShuffleModeCommand setEnabled:NO];
-        
-        // Rating Command
-        [commandCenter.ratingCommand setEnabled:NO];
-        
-        // Feedback Commands
-        // These are generalized to three distinct actions. Your application can provide
-        // additional context about these actions with the localizedTitle property in
-        // MPFeedbackCommand.
-        [commandCenter.likeCommand setEnabled:NO];
-        [commandCenter.dislikeCommand setEnabled:NO];
-        [commandCenter.bookmarkCommand setEnabled:NO];
         
         _isPlaying = NO;
         _ready = NO;
@@ -86,8 +58,44 @@ bool connected = NO;
     return self;
 }
 
+-(void)setCommandCenter{
+    [commandCenter.togglePlayPauseCommand setEnabled:NO];
+    [commandCenter.playCommand setEnabled:YES];
+    [commandCenter.pauseCommand setEnabled:YES];
+    [commandCenter.stopCommand setEnabled:YES];
+    [commandCenter.nextTrackCommand setEnabled:NO];
+    [commandCenter.previousTrackCommand setEnabled:NO];
+    [commandCenter.changePlaybackRateCommand setEnabled:NO];
+    //Unused options
+    [commandCenter.skipForwardCommand setEnabled:NO];
+    [commandCenter.skipBackwardCommand setEnabled:NO];
+    if (@available(iOS 9.0, *)) {
+        [commandCenter.enableLanguageOptionCommand setEnabled:NO];
+        [commandCenter.disableLanguageOptionCommand setEnabled:NO];
+    }
+    [commandCenter.changeRepeatModeCommand setEnabled:NO];
+    [commandCenter.seekForwardCommand setEnabled:NO];
+    [commandCenter.seekBackwardCommand setEnabled:NO];
+    [commandCenter.changeShuffleModeCommand setEnabled:NO];
+    if (@available(iOS 9.1, *)) {
+        [commandCenter.changePlaybackPositionCommand setEnabled:NO];
+    } else {
+        // Fallback on earlier versions
+    }
+    
+    // Rating Command
+    [commandCenter.ratingCommand setEnabled:NO];
+    
+    [commandCenter.likeCommand setEnabled:NO];
+    [commandCenter.dislikeCommand setEnabled:NO];
+    [commandCenter.bookmarkCommand setEnabled:NO];
+}
+
 - (void)handleInterruption:(NSNotification *)notification
 {
+    if([_playerIndex isEqualToString:@"0"]){
+        return;
+    }
     NSDictionary *info = notification.userInfo;
     AVAudioSessionInterruptionType type = [info[AVAudioSessionInterruptionTypeKey] unsignedIntegerValue];
     NSString * status = @"0";
@@ -118,6 +126,9 @@ bool connected = NO;
 
 - (void)handleRouteChange:(NSNotification *)notification
 {
+    if([_playerIndex isEqualToString:@"0"]){
+        return;
+    }
     NSDictionary *info = notification.userInfo;
     AVAudioSessionRouteChangeReason reason = [info[AVAudioSessionRouteChangeReasonKey] unsignedIntegerValue];
     if (reason == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) {  //旧音频设备断开
@@ -126,7 +137,10 @@ bool connected = NO;
         //获取上一线路的输出设备类型
         AVAudioSessionPortDescription *previousOutput = previousRoute.outputs[0];
         NSString *portType = previousOutput.portType;
-        if ([portType isEqualToString:AVAudioSessionPortHeadphones]) {
+        if ([portType isEqualToString:AVAudioSessionPortHeadphones]
+            || [portType isEqualToString:AVAudioSessionPortBluetoothLE]
+            || [portType isEqualToString:AVAudioSessionPortBluetoothHFP]
+            || [portType isEqualToString:AVAudioSessionPortBluetoothA2DP]) {
             NSString * status = @"0";
             NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
             [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
@@ -206,7 +220,13 @@ bool connected = NO;
     } else if ([@"audioStart" isEqualToString:call.method]) {
         NSDictionary* meta = (NSDictionary*)call.arguments[@"meta"];
         [self setMeta:meta result:result];
-    } else {
+    } else if ([@"setCurrentPlyer" isEqualToString:call.method]){
+        // 0 audio 1 radio
+        NSString* playerIndex = (NSString*)call.arguments[@"playerIndex"];
+        _playerIndex = playerIndex;
+        result(@"index set");
+        
+    }else {
         result(FlutterMethodNotImplemented);
     }
 }
@@ -324,8 +344,6 @@ bool connected = NO;
     }
 
     
-    
-    
     songInfo = [NSMutableDictionary dictionaryWithObjectsAndKeys:
                          itemTitle, MPMediaItemPropertyTitle,
                          ControlArtwork, MPMediaItemPropertyArtwork,
@@ -355,7 +373,11 @@ bool connected = NO;
     
 }
 
-- (void)controlPlayOrPause{
+- (MPRemoteCommandHandlerStatus)controlPlay{
+    if (_isPlaying || [_playerIndex isEqualToString:@"0"]) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
+    
     BOOL isPlaying = [self playerPlayPause];
     NSString * status = @"0";
     if(isPlaying == YES){
@@ -370,13 +392,55 @@ bool connected = NO;
     }else {
         [self setVolume:1.0];
     }
+    return MPRemoteCommandHandlerStatusSuccess;
 }
 
--(void)controlPlayStop{
+- (MPRemoteCommandHandlerStatus)controlPause{
+    if (!_isPlaying || [_playerIndex isEqualToString:@"0"]) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
+    
+    BOOL isPlaying = [self playerPlayPause];
+    NSString * status = @"0";
+    if(isPlaying == YES){
+        status = @"1";
+    }
+    NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
+    
+    [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+    
+    if (connected) {
+        [self setVolume:0.0];
+    }else {
+        [self setVolume:1.0];
+    }
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)controlPlayOrPause{
+    BOOL isPlaying = [self playerPlayPause];
+    NSString * status = @"0";
+    if(isPlaying == YES){
+        status = @"1";
+    }
+    NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
+    
+    [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+    
+    if (connected) {
+        [self setVolume:0.0];
+    }else {
+        [self setVolume:1.0];
+    }
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+-(MPRemoteCommandHandlerStatus)controlPlayStop{
     [self playerStop];
     NSString* statusStr = @"{\"status\": \"0\"}";
     
     [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
+    return MPRemoteCommandHandlerStatusSuccess;
 }
 
 - (void) playerStart {
@@ -399,6 +463,7 @@ bool connected = NO;
     [audioPlayer addObserver:self forKeyPath:@"status" options:0 context:nil];
     [audioPlayer addObserver:self forKeyPath:@"rate" options:0 context:nil];
     
+    [self setCommandCenter];
     [self setNowPlaying];
 }
 
@@ -507,6 +572,9 @@ bool connected = NO;
 
 -(void)dealloc{
     [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
+    [commandCenter.playCommand removeTarget:self];
+    [commandCenter.pauseCommand removeTarget:self];
+    [commandCenter.stopCommand removeTarget:self];
 }
 
 @end

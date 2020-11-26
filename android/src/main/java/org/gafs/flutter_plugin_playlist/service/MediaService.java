@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -11,8 +12,10 @@ import android.media.AudioManager;
 
 import android.net.Uri;
 import android.os.IBinder;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.SimpleTarget;
@@ -108,11 +111,10 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
     }
 
     private void initNotificationManager() {
-        playerNotificationManager=new PlayerNotificationManager(this,"channel",33,null,null);
         playerNotificationManager = PlayerNotificationManager.createWithNotificationChannel(
                 this,
-                "channel",
-                R.string.exo_controls_play_description,
+                "InsomniacNotificationChannelId",
+                R.string.default_notification_channel_id,
                 33,
                 new PlayerNotificationManager.MediaDescriptionAdapter() {
                     @Override
@@ -193,6 +195,9 @@ public class MediaService extends Service implements  AudioManager.OnAudioFocusC
                 break;
             case MediaConstans.MUSIC_ACTICON_PAUSE_PLAY:
                 pause();
+                break;
+            case MediaConstans.MUSIC_ACTICON_STOP_PLAY:
+                stop();
                 break;
             case MediaConstans.MUSIC_INFO_UPDATE:
                 updateMediaInfo(intent);

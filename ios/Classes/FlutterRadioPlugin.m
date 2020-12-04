@@ -374,7 +374,7 @@ bool connected = NO;
 }
 
 - (MPRemoteCommandHandlerStatus)controlPlay{
-    if (_isPlaying || [_playerIndex isEqualToString:@"0"]) {
+    if ([_playerIndex isEqualToString:@"0"]) {
         return MPRemoteCommandHandlerStatusCommandFailed;
     }
     
@@ -396,7 +396,7 @@ bool connected = NO;
 }
 
 - (MPRemoteCommandHandlerStatus)controlPause{
-    if (!_isPlaying || [_playerIndex isEqualToString:@"0"]) {
+    if ([_playerIndex isEqualToString:@"0"]) {
         return MPRemoteCommandHandlerStatusCommandFailed;
     }
     

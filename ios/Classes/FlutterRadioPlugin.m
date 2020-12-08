@@ -35,9 +35,6 @@ bool connected = NO;
         //setup control center and lock screen controls
         commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
         [self setCommandCenter];
-        [commandCenter.playCommand addTarget:self action:@selector(controlPlay)];
-        [commandCenter.pauseCommand addTarget:self action:@selector(controlPause)];
-        [commandCenter.stopCommand addTarget:self action:@selector(controlPlayStop)];
         
         _isPlaying = NO;
         _ready = NO;
@@ -59,7 +56,11 @@ bool connected = NO;
 }
 
 -(void)setCommandCenter{
-    [commandCenter.togglePlayPauseCommand setEnabled:NO];
+    [commandCenter.playCommand addTarget:self action:@selector(controlPlayOrPause)];
+    [commandCenter.pauseCommand addTarget:self action:@selector(controlPlayOrPause)];
+    [commandCenter.stopCommand addTarget:self action:@selector(controlPlayStop)];
+    [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(controlPlayOrPause)];
+    [commandCenter.togglePlayPauseCommand setEnabled:YES];
     [commandCenter.playCommand setEnabled:YES];
     [commandCenter.pauseCommand setEnabled:YES];
     [commandCenter.stopCommand setEnabled:YES];
@@ -373,51 +374,11 @@ bool connected = NO;
     
 }
 
-- (MPRemoteCommandHandlerStatus)controlPlay{
-    if ([_playerIndex isEqualToString:@"0"]) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
-    
-    BOOL isPlaying = [self playerPlayPause];
-    NSString * status = @"0";
-    if(isPlaying == YES){
-        status = @"1";
-    }
-    NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
-    
-    [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
-    
-    if (connected) {
-        [self setVolume:0.0];
-    }else {
-        [self setVolume:1.0];
-    }
-    return MPRemoteCommandHandlerStatusSuccess;
-}
-
-- (MPRemoteCommandHandlerStatus)controlPause{
-    if ([_playerIndex isEqualToString:@"0"]) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
-    
-    BOOL isPlaying = [self playerPlayPause];
-    NSString * status = @"0";
-    if(isPlaying == YES){
-        status = @"1";
-    }
-    NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
-    
-    [_channel invokeMethod:@"controlPlayChanged" arguments:statusStr];
-    
-    if (connected) {
-        [self setVolume:0.0];
-    }else {
-        [self setVolume:1.0];
-    }
-    return MPRemoteCommandHandlerStatusSuccess;
-}
 
 - (MPRemoteCommandHandlerStatus)controlPlayOrPause{
+    if ([_playerIndex isEqualToString:@"0"]) {
+        return MPRemoteCommandHandlerStatusCommandFailed;
+    }
     BOOL isPlaying = [self playerPlayPause];
     NSString * status = @"0";
     if(isPlaying == YES){

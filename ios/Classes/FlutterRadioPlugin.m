@@ -34,6 +34,14 @@ bool connected = NO;
     if (self = [super init]) {
         //setup control center and lock screen controls
         commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+        [commandCenter.togglePlayPauseCommand setEnabled:YES];
+        [commandCenter.playCommand setEnabled:YES];
+        [commandCenter.pauseCommand setEnabled:YES];
+        [commandCenter.stopCommand setEnabled:YES];
+        [commandCenter.playCommand addTarget:self action:@selector(controlPlayOrPause)];
+        [commandCenter.pauseCommand addTarget:self action:@selector(controlPlayOrPause)];
+        [commandCenter.stopCommand addTarget:self action:@selector(controlPlayStop)];
+        [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(controlPlayOrPause)];
         [self setCommandCenter];
         
         _isPlaying = NO;
@@ -56,14 +64,6 @@ bool connected = NO;
 }
 
 -(void)setCommandCenter{
-    [commandCenter.playCommand addTarget:self action:@selector(controlPlayOrPause)];
-    [commandCenter.pauseCommand addTarget:self action:@selector(controlPlayOrPause)];
-    [commandCenter.stopCommand addTarget:self action:@selector(controlPlayStop)];
-    [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(controlPlayOrPause)];
-    [commandCenter.togglePlayPauseCommand setEnabled:YES];
-    [commandCenter.playCommand setEnabled:YES];
-    [commandCenter.pauseCommand setEnabled:YES];
-    [commandCenter.stopCommand setEnabled:YES];
     [commandCenter.nextTrackCommand setEnabled:NO];
     [commandCenter.previousTrackCommand setEnabled:NO];
     [commandCenter.changePlaybackRateCommand setEnabled:NO];
@@ -225,6 +225,29 @@ bool connected = NO;
         // 0 audio 1 radio
         NSString* playerIndex = (NSString*)call.arguments[@"playerIndex"];
         _playerIndex = playerIndex;
+        MPRemoteCommand *pauseCommand = [commandCenter pauseCommand];
+        [pauseCommand setEnabled:YES];
+        MPRemoteCommand *playCommand = [commandCenter playCommand];
+        [playCommand setEnabled:YES];
+        MPRemoteCommand *togglePlayPauseCommand = [commandCenter togglePlayPauseCommand];
+        [togglePlayPauseCommand setEnabled:YES];
+        if([playerIndex isEqualToString:@"0"]){
+            
+              [pauseCommand removeTarget:self action:@selector(controlPlayOrPause)];
+            
+              [playCommand removeTarget:self action:@selector(controlPlayOrPause)];
+
+            [togglePlayPauseCommand removeTarget:self action:@selector(controlPlayOrPause)];
+        }else{
+            [pauseCommand removeTarget:self];
+            [playCommand removeTarget:self];
+            [togglePlayPauseCommand removeTarget:self];
+            [pauseCommand addTarget:self action:@selector(controlPlayOrPause)];
+          
+            [playCommand addTarget:self action:@selector(controlPlayOrPause)];
+
+          [togglePlayPauseCommand addTarget:self action:@selector(controlPlayOrPause)];
+        }
         result(@"index set");
         
     }else {
@@ -376,9 +399,9 @@ bool connected = NO;
 
 
 - (MPRemoteCommandHandlerStatus)controlPlayOrPause{
-    if ([_playerIndex isEqualToString:@"0"]) {
-        return MPRemoteCommandHandlerStatusCommandFailed;
-    }
+//    if ([_playerIndex isEqualToString:@"0"]) {
+//        return MPRemoteCommandHandlerStatusCommandFailed;
+//    }
     BOOL isPlaying = [self playerPlayPause];
     NSString * status = @"0";
     if(isPlaying == YES){
@@ -410,7 +433,7 @@ bool connected = NO;
     
     // Able to play in background
     [[AVAudioSession sharedInstance] setActive: YES error: nil];
-    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+//    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
     if([AVAudioSession sharedInstance].category != AVAudioSessionCategoryPlayback){
         [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:nil];
     }
@@ -532,7 +555,7 @@ bool connected = NO;
 }
 
 -(void)dealloc{
-    [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
+//    [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
     [commandCenter.playCommand removeTarget:self];
     [commandCenter.pauseCommand removeTarget:self];
     [commandCenter.stopCommand removeTarget:self];

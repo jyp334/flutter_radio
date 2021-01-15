@@ -101,6 +101,16 @@ bool connected = NO;
     AVAudioSessionInterruptionType type = [info[AVAudioSessionInterruptionTypeKey] unsignedIntegerValue];
     NSString * status = @"0";
     if (type == AVAudioSessionInterruptionTypeBegan) {
+        if (@available(iOS 10.3, *)) {
+            if([info.allKeys containsObject:AVAudioSessionInterruptionWasSuspendedKey]){
+                BOOL isSuspend = [info[AVAudioSessionInterruptionWasSuspendedKey] boolValue];
+                if(isSuspend){
+                    return;
+                }
+            }
+        } else {
+            // Fallback on earlier versions
+        }
         status = @"0";
         //Handle InterruptionBegan
         NSString* statusStr = [NSString stringWithFormat:@"{\"status\": \"%@\"}", status];
@@ -294,6 +304,10 @@ bool connected = NO;
 
 - (void) startPlayer:(NSString*)path result: (FlutterResult)result {
     NSLog(@"startPlayer");
+    if([path isKindOfClass:NSNull.class]){
+        result(@"");
+        return;
+    }
     audioFileURL = [NSURL URLWithString:path];
     
     [self playerStart];
